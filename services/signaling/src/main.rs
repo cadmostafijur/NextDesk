@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/auth/register", post(auth::register))
         .route("/v1/auth/login", post(auth::login))
         .route("/v1/devices/register", post(auth::register_device))
-        .route("/v1/devices/:id/revoke", post(auth::revoke_device))
+        .route("/v1/devices/{id}/revoke", post(auth::revoke_device))
         .route("/v1/turn/credentials", get(turn::issue_credentials))
         .route("/ws", get(ws::ws_handler))
         .layer(

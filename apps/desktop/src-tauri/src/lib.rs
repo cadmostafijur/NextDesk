@@ -14,7 +14,7 @@ use tauri::{Manager, State};
 
 use crate::capture::{list_monitors, CaptureState, MonitorInfo};
 use crate::db::LocalDb;
-use crate::identity::{self, Identity};
+use crate::identity::Identity;
 use crate::input::{FrontInputEvent, InputInjector};
 
 pub struct AppCtx {

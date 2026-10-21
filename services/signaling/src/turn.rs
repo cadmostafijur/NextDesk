@@ -8,7 +8,7 @@ use base64::Engine;
 use chrono::Utc;
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
-use sha2::Sha1;
+use sha1::Sha1;
 
 use crate::auth::verify_token;
 use crate::state::AppState;

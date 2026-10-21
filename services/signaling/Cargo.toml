@@ -30,13 +30,13 @@ base64 = { workspace = true }
 argon2 = { workspace = true }
 jsonwebtoken = { workspace = true }
 dotenvy = { workspace = true }
-sqlx = { workspace = true }
 futures-util = { workspace = true }
 dashmap = { workspace = true }
 parking_lot = { workspace = true }
 clap = { workspace = true }
 hmac = "0.12"
-subtle = "2"
+sha1 = "0.10"
+# sqlx/redis reserved for persistence wiring (schema in migrations/)
 
 [dev-dependencies]
 tokio-tungstenite = "0.26"

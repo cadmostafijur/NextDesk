@@ -84,11 +84,11 @@ fn capture_loop(
         let started = std::time::Instant::now();
         match monitor.capture_image() {
             Ok(img) => {
-                let rgb = img.to_rgb8();
+                let rgb = image::DynamicImage::ImageRgba8(img).into_rgb8();
                 let (w, h) = rgb.dimensions();
                 let mut jpeg = Vec::with_capacity((w * h / 4) as usize);
                 {
-                    let mut enc = JpegEncoder::new_with_quality(&mut jpeg, quality);
+                    let enc = JpegEncoder::new_with_quality(&mut jpeg, quality);
                     if enc
                         .write_image(rgb.as_raw(), w, h, ColorType::Rgb8.into())
                         .is_ok()
@@ -118,10 +118,17 @@ pub fn list_monitors() -> Result<Vec<MonitorInfo>> {
         .enumerate()
         .map(|(i, m)| MonitorInfo {
             index: i,
-            name: m.name().unwrap_or_else(|_| format!("Display {i}")),
-            width: m.width().unwrap_or(0),
-            height: m.height().unwrap_or(0),
-            is_primary: m.is_primary().unwrap_or(false),
+            name: {
+                let n = m.name();
+                if n.is_empty() {
+                    format!("Display {i}")
+                } else {
+                    n.to_string()
+                }
+            },
+            width: m.width(),
+            height: m.height(),
+            is_primary: m.is_primary(),
         })
         .collect())
 }

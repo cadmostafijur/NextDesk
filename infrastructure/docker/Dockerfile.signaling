@@ -1,18 +1,17 @@
 FROM rust:1.83-bookworm AS builder
 WORKDIR /app
-COPY Cargo.toml ./
 COPY packages/protocol ./packages/protocol
 COPY services/signaling ./services/signaling
 COPY services/api ./services/api
-# Desktop is not built in this image; keep workspace resolvable with a stub member exclusion via sparse checkout pattern.
-RUN sed -i 's|"apps/desktop/src-tauri",||' Cargo.toml \
+# Minimal workspace without the Tauri desktop member
+RUN printf '[workspace]\nresolver = "2"\nmembers = ["packages/protocol","services/signaling","services/api"]\n' > Cargo.toml \
  && cargo build --release -p nexdesk-signaling
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/nexdesk-signaling /usr/local/bin/nexdesk-signaling
 EXPOSE 7800
 HEALTHCHECK CMD curl -fsS http://127.0.0.1:7800/health || exit 1
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 USER nobody
 CMD ["nexdesk-signaling"]
