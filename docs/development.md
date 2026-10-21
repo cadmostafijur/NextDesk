@@ -7,6 +7,8 @@
 - WebView2 Runtime (usually preinstalled on Windows 11)
 - Optional: Docker Desktop for Postgres/Redis/TURN
 
+If `C:` is low on disk, run `scripts\env-cargo.bat` first (sets `CARGO_HOME` / target dir on `E:`).
+
 ## Run signaling
 
 ```powershell
@@ -49,8 +51,10 @@ pnpm tauri dev
 ```powershell
 cargo test -p nexdesk-protocol
 cargo test -p nexdesk-signaling
+node tests\integration\signaling_e2e.mjs
 cd apps\desktop
 pnpm lint
+pnpm build
 ```
 
 ## Benchmarks (manual)
