@@ -6,6 +6,11 @@ members = [
   "services/api",
   "apps/desktop/src-tauri",
 ]
+default-members = [
+  "packages/protocol",
+  "services/signaling",
+  "services/api",
+]
 
 [workspace.package]
 version = "0.1.0"

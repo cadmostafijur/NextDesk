@@ -1,0 +1,18 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "NexDesk default capabilities",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "shell:allow-open",
+    "dialog:default",
+    "fs:default",
+    "notification:default",
+    "os:default",
+    "clipboard-manager:default",
+    "store:default"
+  ]
+}

@@ -1,0 +1,57 @@
+[package]
+name = "nexdesk"
+version = "0.1.0"
+description = "NexDesk remote desktop client"
+authors = ["NexDesk Contributors"]
+edition = "2021"
+license = "Proprietary"
+
+[lib]
+name = "nexdesk_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+nexdesk-protocol = { path = "../../../packages/protocol" }
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-store = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-os = "2"
+tauri-plugin-clipboard-manager = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
+sha2 = "0.10"
+hex = "0.4"
+anyhow = "1"
+thiserror = "2"
+parking_lot = "0.12"
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+xcap = "0.0.14"
+enigo = "0.3"
+rusqlite = { version = "0.32", features = ["bundled"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+tracing = "0.1"
+base64 = "0.22"
+keyring = "3"
+argon2 = "0.5"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+  "Win32_Foundation",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_Graphics_Gdi",
+] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

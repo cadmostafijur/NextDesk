@@ -1,0 +1,32 @@
+# Build
+**/target/
+**/dist/
+**/node_modules/
+*.exe
+*.dll
+*.pdb
+
+# Env / secrets
+.env
+.env.local
+*.pem
+*.key
+secrets/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Tauri / local
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/WixTools/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+
+# Logs / coverage
+*.log
+coverage/
+.turbo/

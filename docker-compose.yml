@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nexdesk
+      POSTGRES_PASSWORD: nexdesk
+      POSTGRES_DB: nexdesk
+    ports:
+      - "5432:5432"
+    volumes:
+      - nexdesk_pg:/var/lib/postgresql/data
+      - ./services/signaling/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexdesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  signaling:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.signaling
+    env_file:
+      - .env
+    environment:
+      NEXDESK_BIND: 0.0.0.0:7800
+      DATABASE_URL: postgres://nexdesk:nexdesk@postgres:5432/nexdesk
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "7800:7800"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  coturn:
+    image: coturn/coturn:latest
+    network_mode: host
+    volumes:
+      - ./infrastructure/turn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    profiles: ["turn"]
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./infrastructure/nginx/nexdesk.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - signaling
+    profiles: ["prod"]
+
+volumes:
+  nexdesk_pg:

@@ -47,6 +47,8 @@ pub struct AuthResponse {
 pub struct RegisterDeviceRequest {
     pub device_name: String,
     pub device_secret: String,
+    /// Optional client-proposed ID (NXD-…). Server validates format & uniqueness.
+    pub device_id: Option<String>,
     /// Optional account token; omit for account-free local registration.
     pub access_token: Option<String>,
 }
@@ -203,16 +205,31 @@ pub async fn register_device(
         None
     };
 
-    // Collision-safe allocation
-    let mut device_id = generate_device_id();
-    for _ in 0..8 {
-        if !state.devices.contains_key(&device_id) {
-            break;
+    let mut device_id = if let Some(proposed) = body.device_id.as_ref() {
+        let proposed = proposed.trim().to_uppercase();
+        if !proposed.starts_with("NXD-") || proposed.len() < 12 || proposed.len() > 32 {
+            return Err(StatusCode::BAD_REQUEST);
         }
-        device_id = generate_device_id();
-    }
+        if state.devices.contains_key(&proposed) {
+            return Err(StatusCode::CONFLICT);
+        }
+        proposed
+    } else {
+        let mut id = generate_device_id();
+        for _ in 0..8 {
+            if !state.devices.contains_key(&id) {
+                break;
+            }
+            id = generate_device_id();
+        }
+        id
+    };
     if state.devices.contains_key(&device_id) {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        // Extremely unlikely for generated IDs
+        device_id = generate_device_id();
+        if state.devices.contains_key(&device_id) {
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
     }
 
     let secret_hash = hash_password(&body.device_secret)?;
