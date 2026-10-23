@@ -1,11 +1,12 @@
-FROM rust:1.83-bookworm AS builder
+FROM rust:1-bookworm AS builder
 WORKDIR /app
+COPY Cargo.lock ./Cargo.lock
 COPY packages/protocol ./packages/protocol
 COPY services/signaling ./services/signaling
 COPY services/api ./services/api
-# Minimal workspace without the Tauri desktop member
-RUN printf '[workspace]\nresolver = "2"\nmembers = ["packages/protocol","services/signaling","services/api"]\n' > Cargo.toml \
- && cargo build --release -p nexdesk-signaling
+COPY Cargo.toml ./Cargo.toml
+# Same workspace (shared deps) minus the Tauri desktop member
+RUN sed -i '/src-tauri/d' Cargo.toml && cargo build --release -p nexdesk-signaling
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
