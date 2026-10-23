@@ -72,6 +72,7 @@ async fn health() -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "status": "ok",
         "service": "nexdesk-signaling",
+        "version": env!("CARGO_PKG_VERSION"),
         "protocol": nexdesk_protocol::PROTOCOL_VERSION,
     }))
 }
