@@ -85,7 +85,6 @@ export async function connectSignaling(): Promise<void> {
     signalingConnected: true,
     presence: "online",
     error: null,
-    statusMessage: "Connected to NexDesk network",
   });
 }
 

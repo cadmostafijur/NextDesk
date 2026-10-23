@@ -57,8 +57,9 @@ export function Home() {
           <div className="text-sm leading-relaxed text-ink">
             <p className="font-medium">Not connected to a NexDesk server</p>
             <p className="mt-0.5 text-ink-muted">
-              This app is trying <code className="font-mono text-[13px] text-ink">{signalingUrl}</code>.
-              Check your internet connection, or change the address in{" "}
+              The free server may be waking up. Wait about a minute and it reconnects on its own.
+              If it stays offline, check your internet connection or the address{" "}
+              <code className="font-mono text-[13px] text-ink">{signalingUrl}</code> in{" "}
               <Link to="/settings" className="font-medium text-accent underline underline-offset-2">
                 Settings
               </Link>
@@ -124,10 +125,6 @@ export function Home() {
             </li>
           ))}
         </ol>
-        <p className="mt-3 text-[13px] text-ink-muted">
-          Showing Offline? The free server may be waking up. Wait about a minute and it reconnects
-          on its own.
-        </p>
       </section>
     </div>
   );

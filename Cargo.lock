@@ -3012,7 +3012,7 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
 name = "nexdesk"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "argon2",
@@ -3049,7 +3049,7 @@ dependencies = [
 
 [[package]]
 name = "nexdesk-api"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "axum",
@@ -3068,7 +3068,7 @@ dependencies = [
 
 [[package]]
 name = "nexdesk-protocol"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "serde",
@@ -3079,7 +3079,7 @@ dependencies = [
 
 [[package]]
 name = "nexdesk-signaling"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "argon2",

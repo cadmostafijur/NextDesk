@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Shell } from "./components/Shell";
 import { Onboarding } from "./pages/Onboarding";
@@ -40,6 +41,11 @@ export default function App() {
     const preferDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const dark = theme === "dark" || (theme === "system" && preferDark);
     root.classList.toggle("dark", dark);
+    // Keep the native Windows title bar in step with the app, instead of
+    // following the OS theme (a dark bar over a white app looks broken).
+    void getCurrentWindow()
+      .setTheme(theme === "system" ? null : theme)
+      .catch(() => undefined);
   }, [theme]);
 
   if (!onboarded) {
