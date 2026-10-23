@@ -59,7 +59,7 @@ export const useAppStore = create<AppState>((set) => ({
   deviceName: "",
   deviceSecret: "",
   deviceToken: "",
-  theme: "system",
+  theme: "light",
   signalingUrl: defaultSignaling,
   signalingConnected: false,
   presence: "offline",

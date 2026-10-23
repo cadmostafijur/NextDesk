@@ -66,7 +66,7 @@ pub fn load_or_init(db: &LocalDb) -> Result<Identity> {
     let signaling_url = db
         .get_meta("signaling_url")?
         .unwrap_or_else(|| "ws://127.0.0.1:7800/ws".into());
-    let theme = db.get_meta("theme")?.unwrap_or_else(|| "system".into());
+    let theme = db.get_meta("theme")?.unwrap_or_else(|| "light".into());
 
     Ok(Identity {
         device_id,

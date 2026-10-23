@@ -5,8 +5,8 @@ export function Recent() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-3xl font-bold text-ink">Recent sessions</h1>
-      <p className="mt-2 text-ink-muted">Local history of completed connections on this device.</p>
+      <h1 className="nd-page-title">Recent sessions</h1>
+      <p className="nd-page-lede">Local history of completed connections on this device.</p>
       <div className="nd-panel mt-6 divide-y divide-line">
         {recent.length === 0 && (
           <p className="p-5 text-ink-muted">No sessions yet.</p>

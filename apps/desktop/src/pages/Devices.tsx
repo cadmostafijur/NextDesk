@@ -14,8 +14,8 @@ export function Devices() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-3xl font-bold text-ink">Saved devices</h1>
-      <p className="mt-2 text-ink-muted">
+      <h1 className="nd-page-title">Saved devices</h1>
+      <p className="nd-page-lede">
         Bookmarks for devices you connect to often. Saving an ID does not grant access.
       </p>
       <div className="mt-4">

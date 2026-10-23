@@ -3,36 +3,36 @@
 @tailwind utilities;
 
 :root {
-  --surface: 244 246 248;
+  --surface: 255 255 255;
   --surface-raised: 255 255 255;
-  --surface-sunken: 232 236 240;
-  --ink: 18 28 38;
-  --ink-muted: 78 92 108;
-  --ink-faint: 130 144 160;
-  --accent: 0 140 122;
-  --accent-soft: 210 242 236;
-  --accent-strong: 0 110 96;
-  --danger: 196 54 54;
-  --success: 22 140 90;
-  --warn: 196 140 20;
-  --line: 210 218 226;
+  --surface-sunken: 246 247 249;
+  --ink: 17 24 39;
+  --ink-muted: 75 85 99;
+  --ink-faint: 107 114 128;
+  --accent: 37 99 235;
+  --accent-soft: 235 241 254;
+  --accent-strong: 29 78 216;
+  --danger: 200 40 40;
+  --success: 21 128 61;
+  --warn: 180 83 9;
+  --line: 229 231 235;
   color-scheme: light;
 }
 
 .dark {
-  --surface: 14 20 28;
-  --surface-raised: 24 32 42;
-  --surface-sunken: 10 14 20;
-  --ink: 236 241 246;
-  --ink-muted: 164 176 190;
-  --ink-faint: 110 124 140;
-  --accent: 45 196 172;
-  --accent-soft: 18 48 44;
-  --accent-strong: 70 220 194;
-  --danger: 232 96 96;
-  --success: 72 196 140;
-  --warn: 230 180 70;
-  --line: 42 54 68;
+  --surface: 17 19 24;
+  --surface-raised: 24 27 33;
+  --surface-sunken: 12 14 18;
+  --ink: 237 239 243;
+  --ink-muted: 168 175 186;
+  --ink-faint: 130 138 150;
+  --accent: 96 145 250;
+  --accent-soft: 26 38 66;
+  --accent-strong: 140 175 252;
+  --danger: 240 100 100;
+  --success: 74 200 130;
+  --warn: 230 170 70;
+  --line: 44 49 58;
   color-scheme: dark;
 }
 
@@ -44,29 +44,52 @@ body,
 
 body {
   margin: 0;
-  background:
-    radial-gradient(1200px 600px at 10% -10%, rgb(var(--accent) / 0.12), transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, rgb(var(--accent-strong) / 0.08), transparent 50%),
-    rgb(var(--surface));
-  font-family: "DM Sans", "Segoe UI", sans-serif;
+  background: rgb(var(--surface));
+  font-family: "Instrument Sans", "Segoe UI", sans-serif;
+}
+
+::selection {
+  background: rgb(var(--accent) / 0.18);
+  color: rgb(var(--ink));
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--line)) transparent;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--accent) / 0.55);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  caret-color: rgb(var(--accent));
 }
 
 @layer components {
   .nd-panel {
-    @apply rounded-2xl border border-line bg-surface-raised/90 backdrop-blur-sm;
+    @apply rounded-xl border border-line bg-surface-raised;
   }
 
   .nd-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1
+      disabled:opacity-45 disabled:pointer-events-none;
   }
 
   .nd-btn-primary {
-    @apply nd-btn bg-accent text-white hover:bg-accent-strong;
+    @apply nd-btn bg-accent text-white shadow-[0_1px_2px_rgb(17_24_39/0.12)] hover:bg-accent-strong;
   }
 
   .nd-btn-ghost {
     @apply nd-btn bg-transparent text-ink hover:bg-surface-sunken;
+  }
+
+  .nd-btn-outline {
+    @apply nd-btn border border-line bg-surface-raised text-ink hover:bg-surface-sunken;
   }
 
   .nd-btn-danger {
@@ -74,11 +97,23 @@ body {
   }
 
   .nd-input {
-    @apply w-full rounded-xl border border-line bg-surface-sunken/70 px-3.5 py-2.5 text-sm text-ink
-      placeholder:text-ink-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30;
+    @apply w-full rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-ink
+      placeholder:text-ink-faint focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10;
   }
 
   .nd-label {
-    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted;
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+
+  .nd-hint {
+    @apply mt-1.5 text-[13px] leading-relaxed text-ink-muted;
+  }
+
+  .nd-page-title {
+    @apply text-2xl font-semibold tracking-tight text-ink;
+  }
+
+  .nd-page-lede {
+    @apply mt-1.5 max-w-[62ch] text-[15px] leading-relaxed text-ink-muted;
   }
 }

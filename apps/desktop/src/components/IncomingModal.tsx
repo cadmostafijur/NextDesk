@@ -1,3 +1,4 @@
+import { MonitorSmartphone } from "lucide-react";
 import { acceptIncoming, rejectIncoming } from "../lib/sessionController";
 import { useAppStore } from "../lib/store";
 
@@ -11,27 +12,32 @@ export function IncomingModal() {
     .join(", ");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-      <div className="nd-panel w-full max-w-md p-6 shadow-panel animate-fadeUp">
-        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-          Incoming connection
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 p-4">
+      <div
+        role="alertdialog"
+        aria-labelledby="incoming-title"
+        className="w-full max-w-sm rounded-2xl border border-line bg-surface-raised p-6 shadow-panel animate-fadeUp"
+      >
+        <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent-soft text-accent">
+          <MonitorSmartphone size={20} />
         </div>
-        <h2 className="mt-2 text-2xl font-bold text-ink">{incoming.fromName}</h2>
-        <p className="mt-1 font-mono text-sm text-ink-muted">{incoming.from}</p>
-        {incoming.message && (
-          <p className="mt-3 text-sm text-ink">{incoming.message}</p>
-        )}
-        <p className="mt-4 text-sm text-ink-muted">
-          Requested permissions: <span className="text-ink">{perms || "view"}</span>
+        <h2 id="incoming-title" className="mt-4 text-lg font-semibold text-ink">
+          {incoming.fromName} wants to connect
+        </h2>
+        <p className="mt-0.5 font-mono text-[13px] text-ink-muted">{incoming.from}</p>
+        {incoming.message && <p className="mt-3 text-sm text-ink">{incoming.message}</p>}
+        <dl className="mt-4 rounded-lg bg-surface-sunken px-3 py-2.5 text-sm">
+          <dt className="text-[13px] text-ink-muted">They’re asking for</dt>
+          <dd className="mt-0.5 font-medium capitalize text-ink">{perms || "view"}</dd>
+        </dl>
+        <p className="mt-3 text-[13px] leading-relaxed text-ink-muted">
+          Only accept if you know this person. They will see your screen.
         </p>
-        <p className="mt-2 text-xs text-ink-faint">
-          Device IDs are not passwords. Only accept connections from people you trust.
-        </p>
-        <div className="mt-6 flex gap-3">
-          <button className="nd-btn-danger flex-1" onClick={() => rejectIncoming()}>
-            Reject
+        <div className="mt-6 flex gap-2.5">
+          <button className="nd-btn-outline flex-1" onClick={() => rejectIncoming()}>
+            Decline
           </button>
-          <button className="nd-btn-primary flex-1" onClick={() => acceptIncoming()}>
+          <button className="nd-btn-primary flex-1" onClick={() => acceptIncoming()} autoFocus>
             Accept
           </button>
         </div>

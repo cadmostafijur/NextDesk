@@ -5,8 +5,8 @@ export function FileTransfer() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-3xl font-bold text-ink">File transfer</h1>
-      <p className="mt-2 text-ink-muted">
+      <h1 className="nd-page-title">File transfer</h1>
+      <p className="nd-page-lede">
         Transfers require an active session with the file_transfer permission. Paths are sanitized;
         SHA-256 verifies integrity after each completed transfer.
       </p>

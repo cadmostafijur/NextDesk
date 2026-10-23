@@ -26,11 +26,11 @@ export default {
         line: "rgb(var(--line) / <alpha-value>)",
       },
       fontFamily: {
-        sans: ['"DM Sans"', "Segoe UI", "sans-serif"],
+        sans: ['"Instrument Sans"', "Segoe UI", "sans-serif"],
         mono: ['"JetBrains Mono"', "Consolas", "monospace"],
       },
       boxShadow: {
-        panel: "0 12px 40px rgb(0 0 0 / 0.18)",
+        panel: "0 1px 2px rgb(17 24 39 / 0.04), 0 12px 32px -8px rgb(17 24 39 / 0.14)",
       },
       keyframes: {
         pulseDot: {

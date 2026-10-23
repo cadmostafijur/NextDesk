@@ -27,15 +27,9 @@ export default function App() {
       if (st.onboarded) {
         try {
           await connectSignaling();
-        } catch (e) {
-          st.set({
-            error:
-              e instanceof Error
-                ? e.message
-                : "Signaling server unreachable. Start nexdesk-signaling on :7800.",
-            signalingConnected: false,
-            presence: "offline",
-          });
+        } catch {
+          // Home and the sidebar explain the offline state; no banner needed here.
+          st.set({ signalingConnected: false, presence: "offline" });
         }
       }
     })();

@@ -1,10 +1,9 @@
 import { useState } from "react";
+import { MonitorSmartphone } from "lucide-react";
 import { completeOnboarding } from "../lib/sessionController";
 
 export function Onboarding() {
-  const [name, setName] = useState(
-    () => `${navigator.platform || "PC"}`.replace(/[^\w\s-]/g, "").slice(0, 40) || "My Computer",
-  );
+  const [name, setName] = useState("My Computer");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,16 +20,21 @@ export function Onboarding() {
   }
 
   return (
-    <div className="flex h-full items-center justify-center p-6">
-      <form onSubmit={submit} className="nd-panel w-full max-w-lg p-8 shadow-panel animate-fadeUp">
-        <div className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">Welcome</div>
-        <h1 className="mt-2 text-4xl font-bold tracking-tight text-ink">NexDesk</h1>
-        <p className="mt-3 text-ink-muted">
-          Secure remote desktop for your machines. Your device gets a unique ID for discovery —
-          access still requires an explicit accept or configured unattended credentials.
+    <div className="flex h-full items-center justify-center bg-surface-sunken p-6">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-md rounded-2xl border border-line bg-surface-raised p-8 shadow-panel animate-fadeUp"
+      >
+        <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-white">
+          <MonitorSmartphone size={20} strokeWidth={2.1} />
+        </div>
+        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-ink">Welcome to NexDesk</h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-ink-muted">
+          Name this computer. You’ll get an ID that others use to ask for a connection, and you
+          approve every request.
         </p>
-        <label className="mt-8 block">
-          <span className="nd-label">Device name</span>
+        <label className="mt-7 block">
+          <span className="nd-label">Computer name</span>
           <input
             className="nd-input"
             value={name}
@@ -41,8 +45,8 @@ export function Onboarding() {
           />
         </label>
         {error && <p className="mt-3 text-sm text-danger">{error}</p>}
-        <button className="nd-btn-primary mt-6 w-full" disabled={busy} type="submit">
-          {busy ? "Setting up…" : "Create my device ID"}
+        <button className="nd-btn-primary mt-6 w-full py-2.5" disabled={busy} type="submit">
+          {busy ? "Setting up…" : "Continue"}
         </button>
       </form>
     </div>

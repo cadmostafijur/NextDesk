@@ -3,7 +3,7 @@ import { PROTOCOL_VERSION } from "../lib/protocol";
 export function About() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="text-3xl font-bold text-ink">About NexDesk</h1>
+      <h1 className="nd-page-title">About NexDesk</h1>
       <div className="nd-panel space-y-2 p-5 text-sm text-ink-muted">
         <p>
           <span className="font-semibold text-ink">Version:</span> 0.1.0

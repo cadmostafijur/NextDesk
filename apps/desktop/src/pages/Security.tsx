@@ -25,15 +25,15 @@ export function Security() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-ink">Security & access</h1>
-        <p className="mt-2 text-ink-muted">
+        <h1 className="nd-page-title">Security & access</h1>
+        <p className="nd-page-lede">
           Device <span className="font-mono text-ink">{deviceId}</span> is an identifier only.
           Authentication uses device secrets, account tokens, and explicit session consent.
         </p>
       </div>
 
-      <section className="nd-panel p-5">
-        <h2 className="text-lg font-semibold text-ink">Unattended access</h2>
+      <section className="nd-panel p-6">
+        <h2 className="text-base font-semibold text-ink">Unattended access</h2>
         <p className="mt-2 text-sm text-ink-muted">
           Off by default. Enabling stores a credential via the OS secret store / local encrypted
           preference and requires that credential for auto-accept. Active sessions remain visible.
@@ -61,8 +61,8 @@ export function Security() {
         {msg && <p className="mt-3 text-sm text-accent-strong">{msg}</p>}
       </section>
 
-      <section className="nd-panel p-5">
-        <h2 className="text-lg font-semibold text-ink">Session safety</h2>
+      <section className="nd-panel p-6">
+        <h2 className="text-base font-semibold text-ink">Session safety</h2>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-muted">
           <li>Reject unexpected connection requests.</li>
           <li>Prefer view-only when control is not needed.</li>

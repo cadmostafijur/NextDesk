@@ -123,12 +123,12 @@ export function SessionView() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-surface-sunken">
-      <header className="flex items-center justify-between border-b border-line bg-surface-raised/90 px-4 py-2">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-            {active.role === "host" ? "Sharing" : "Controlling"}
-          </div>
-          <div className="font-mono text-sm text-ink">{active.peer}</div>
+      <header className="flex items-center justify-between border-b border-line bg-surface-raised px-4 py-2">
+        <div className="flex items-baseline gap-2">
+          <span className="text-sm font-medium text-ink">
+            {active.role === "host" ? "Sharing with" : "Connected to"}
+          </span>
+          <span className="font-mono text-sm text-ink-muted">{active.peer}</span>
         </div>
         <div className="flex items-center gap-3 text-xs text-ink-muted">
           <span className="inline-flex items-center gap-1">
@@ -198,7 +198,7 @@ export function SessionView() {
         </div>
 
         {chatOpen && (
-          <aside className="absolute bottom-4 right-4 flex h-72 w-80 flex-col rounded-2xl border border-line bg-surface-raised shadow-panel">
+          <aside className="absolute bottom-4 right-4 flex h-72 w-80 flex-col rounded-xl border border-line bg-surface-raised shadow-panel">
             <div className="border-b border-line px-3 py-2 text-sm font-semibold">Session chat</div>
             <div className="flex-1 space-y-1 overflow-auto p-3 text-sm">
               {messages.length === 0 && (
