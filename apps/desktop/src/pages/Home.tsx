@@ -7,16 +7,16 @@ import { requestConnect } from "../lib/sessionController";
 
 const steps = [
   {
-    title: "Run the NexDesk server on one PC",
-    body: "Start nexdesk-signaling on any one computer. Both PCs talk to it to find each other.",
+    title: "Install NexDesk on both PCs",
+    body: "Each PC connects to the NexDesk server automatically and gets its own ID.",
   },
   {
-    title: "Point both PCs at that server",
-    body: "In Settings, set the server address. Use the server PC’s network IP, e.g. ws://192.168.1.20:7800/ws.",
+    title: "Enter the other PC’s ID",
+    body: "Ask them for the ID on their Home screen and type it in the box above.",
   },
   {
-    title: "Enter the other PC’s ID and connect",
-    body: "Type their NexDesk ID in the box above. They click Accept, and their screen appears.",
+    title: "They click Accept",
+    body: "Their screen appears. Either side can disconnect at any time.",
   },
 ];
 
@@ -58,7 +58,7 @@ export function Home() {
             <p className="font-medium">Not connected to a NexDesk server</p>
             <p className="mt-0.5 text-ink-muted">
               This app is trying <code className="font-mono text-[13px] text-ink">{signalingUrl}</code>.
-              Start the server, or change the address in{" "}
+              Check your internet connection, or change the address in{" "}
               <Link to="/settings" className="font-medium text-accent underline underline-offset-2">
                 Settings
               </Link>
@@ -125,8 +125,8 @@ export function Home() {
           ))}
         </ol>
         <p className="mt-3 text-[13px] text-ink-muted">
-          Testing on one PC? Leave the address as{" "}
-          <code className="font-mono text-ink">ws://127.0.0.1:7800/ws</code> and open the app twice.
+          Showing Offline? The free server may be waking up. Wait about a minute and it reconnects
+          on its own.
         </p>
       </section>
     </div>

@@ -1,4 +1,5 @@
 import { PROTOCOL_VERSION } from "../lib/protocol";
+import { APP_VERSION } from "../lib/store";
 
 export function About() {
   return (
@@ -6,7 +7,7 @@ export function About() {
       <h1 className="nd-page-title">About NexDesk</h1>
       <div className="nd-panel space-y-2 p-5 text-sm text-ink-muted">
         <p>
-          <span className="font-semibold text-ink">Version:</span> 0.1.0
+          <span className="font-semibold text-ink">Version:</span> {APP_VERSION}
         </p>
         <p>
           <span className="font-semibold text-ink">Protocol:</span> v{PROTOCOL_VERSION}

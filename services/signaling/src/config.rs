@@ -17,8 +17,9 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Result<Self> {
-        let jwt_secret = std::env::var("NEXDESK_JWT_SECRET")
-            .unwrap_or_else(|_| "dev-only-change-me-nexdesk-jwt-secret-32b".into());
+        // Without an explicit secret, use a random per-process one rather than a
+        // value published in the source; tokens then simply expire on restart.
+        let jwt_secret = std::env::var("NEXDESK_JWT_SECRET").unwrap_or_else(|_| random_secret());
         if jwt_secret.len() < 32 {
             bail!("NEXDESK_JWT_SECRET must be at least 32 characters");
         }
@@ -37,7 +38,7 @@ impl Config {
             database_url: std::env::var("DATABASE_URL").ok(),
             redis_url: std::env::var("REDIS_URL").ok(),
             turn_shared_secret: std::env::var("NEXDESK_TURN_SECRET")
-                .unwrap_or_else(|_| "dev-only-turn-secret-change-me".into()),
+                .unwrap_or_else(|_| random_secret()),
             turn_urls,
             turn_ttl_seconds: std::env::var("NEXDESK_TURN_TTL")
                 .ok()
@@ -49,9 +50,10 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(20),
+            // "dev:<id>:<anything>" tokens skip secret checks: opt-in for local testing only.
             allow_dev_tokens: std::env::var("NEXDESK_ALLOW_DEV_TOKENS")
                 .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-                .unwrap_or(true),
+                .unwrap_or(false),
         }
         .validated()?)
     }
@@ -62,6 +64,12 @@ impl Config {
         }
         Ok(self)
     }
+}
+
+fn random_secret() -> String {
+    use rand::Rng;
+    let bytes: [u8; 32] = rand::thread_rng().gen();
+    hex::encode(bytes)
 }
 
 #[allow(dead_code)]

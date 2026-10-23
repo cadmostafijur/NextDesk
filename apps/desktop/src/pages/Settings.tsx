@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { connectSignaling } from "../lib/sessionController";
 import { useAppStore } from "../lib/store";
 
+const CLOUD_URL = "wss://nextdesk-4ecs.onrender.com/ws";
 const LOCAL_URL = "ws://127.0.0.1:7800/ws";
 
 export function Settings() {
@@ -60,7 +61,17 @@ export function Settings() {
             Both computers must use the <span className="font-medium text-ink">same</span> server.
           </li>
           <li>
-            On the PC running the server:{" "}
+            NexDesk cloud (default):{" "}
+            <button
+              type="button"
+              className="font-mono text-accent underline underline-offset-2"
+              onClick={() => set({ signalingUrl: CLOUD_URL })}
+            >
+              {CLOUD_URL}
+            </button>
+          </li>
+          <li>
+            Your own server on this PC:{" "}
             <button
               type="button"
               className="font-mono text-accent underline underline-offset-2"
@@ -68,11 +79,7 @@ export function Settings() {
             >
               {LOCAL_URL}
             </button>
-          </li>
-          <li>
-            On the other PC: <code className="font-mono text-ink">ws://SERVER-PC-IP:7800/ws</code>.
-            Find the IP by running <code className="font-mono text-ink">ipconfig</code> on the server
-            PC (IPv4 Address).
+            . Other PCs then use <code className="font-mono text-ink">ws://THIS-PC-IP:7800/ws</code>.
           </li>
         </ul>
       </section>

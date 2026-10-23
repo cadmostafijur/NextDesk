@@ -207,7 +207,7 @@ pub async fn register_device(
 
     let mut device_id = if let Some(proposed) = body.device_id.as_ref() {
         let proposed = proposed.trim().to_uppercase();
-        if !proposed.starts_with("NXD-") || proposed.len() < 12 || proposed.len() > 32 {
+        if !is_device_id(&proposed) {
             return Err(StatusCode::BAD_REQUEST);
         }
         if state.devices.contains_key(&proposed) {
@@ -283,7 +283,22 @@ pub async fn revoke_device(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Authenticate a device WebSocket hello token against registered secret or JWT.
+/// Minimum length of a device secret presented for trust-on-first-use.
+const MIN_DEVICE_SECRET_LEN: usize = 32;
+
+fn is_device_id(id: &str) -> bool {
+    id.starts_with("NXD-") && (12..=32).contains(&id.len())
+}
+
+/// Authenticate a device WebSocket hello.
+///
+/// Accepted credentials, in order:
+/// 1. the secret the device was registered (or first seen) with;
+/// 2. a device JWT bound to exactly this device ID;
+/// 3. trust on first use: an unclaimed ID is bound to the secret that first
+///    presents it, so later hellos for that ID must present the same secret.
+///
+/// User access tokens never authenticate a device.
 pub fn authenticate_device_hello(
     state: &AppState,
     device_id: &str,
@@ -298,37 +313,32 @@ pub fn authenticate_device_hello(
         }
     }
 
-    match verify_token(state, auth_token) {
-        Ok(claims) => {
-            if let Some(did) = &claims.device_id {
-                if did != device_id {
-                    return Err("token device mismatch");
-                }
-            }
-            // Allow first-seen local devices in dev when token binds to device
-            if state.cfg.allow_dev_tokens && !state.devices.contains_key(device_id) {
-                let secret_hash = hash_password(auth_token).unwrap_or_default();
-                state.devices.insert(
-                    device_id.to_string(),
-                    DeviceRecord {
-                        device_id: DeviceId(device_id.to_string()),
-                        device_name: "Unregistered".into(),
-                        public_key_hint: String::new(),
-                        owner_user_id: None,
-                        revoked: false,
-                        created_at: Utc::now(),
-                        secret_hash,
-                    },
-                );
-            }
-            if let Some(rec) = state.devices.get(device_id) {
-                if rec.revoked {
-                    return Err("device revoked");
-                }
-            }
-            Ok(claims.sub)
+    if let Ok(claims) = verify_token(state, auth_token) {
+        if claims.kind == "device" && claims.device_id.as_deref() == Some(device_id) {
+            return Ok(claims.sub);
         }
-        Err(_) => Err("unauthorized"),
+        return Err("token device mismatch");
+    }
+
+    if !is_device_id(device_id) || auth_token.len() < MIN_DEVICE_SECRET_LEN {
+        return Err("unauthorized");
+    }
+    let secret_hash = hash_password(auth_token).map_err(|_| "unauthorized")?;
+    match state.devices.entry(device_id.to_string()) {
+        dashmap::mapref::entry::Entry::Occupied(_) => Err("unauthorized"),
+        dashmap::mapref::entry::Entry::Vacant(slot) => {
+            slot.insert(DeviceRecord {
+                device_id: DeviceId(device_id.to_string()),
+                device_name: "Unregistered".into(),
+                public_key_hint: String::new(),
+                owner_user_id: None,
+                revoked: false,
+                created_at: Utc::now(),
+                secret_hash,
+            });
+            state.audit("device_first_seen", device_id, "");
+            Ok(format!("device:{device_id}"))
+        }
     }
 }
 

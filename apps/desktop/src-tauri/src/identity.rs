@@ -65,7 +65,7 @@ pub fn load_or_init(db: &LocalDb) -> Result<Identity> {
         .unwrap_or(false);
     let signaling_url = db
         .get_meta("signaling_url")?
-        .unwrap_or_else(|| "ws://127.0.0.1:7800/ws".into());
+        .unwrap_or_else(|| "wss://nextdesk-4ecs.onrender.com/ws".into());
     let theme = db.get_meta("theme")?.unwrap_or_else(|| "light".into());
 
     Ok(Identity {

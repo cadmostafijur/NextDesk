@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { SignalingClient } from "./signaling";
 import { RemoteSession } from "./webrtc";
 import { FULL_ATTENDED, type PermissionSet, type SignalMessage } from "./protocol";
-import { useAppStore } from "./store";
+import { APP_VERSION, useAppStore } from "./store";
 
 let signaling: SignalingClient | null = null;
 let remote: RemoteSession | null = null;
@@ -68,18 +68,14 @@ export async function connectSignaling(): Promise<void> {
   signaling = new SignalingClient(st.signalingUrl);
   signaling.onMessage(handleSignal);
 
-  // Prefer registered JWT; fall back to device secret / dev token
-  const auth =
-    st.deviceToken ||
-    st.deviceSecret ||
-    `dev:${st.deviceId}:${st.deviceSecret}`;
-
+  // The device secret never expires and lets the server re-bind this ID after
+  // it restarts, unlike the 12-hour registration JWT.
   await signaling.connect({
     type: "hello",
     device_id: st.deviceId,
     device_name: st.deviceName || "NexDesk PC",
-    auth_token: auth,
-    client_version: "0.1.0",
+    auth_token: st.deviceSecret,
+    client_version: APP_VERSION,
   });
 
   useAppStore.getState().set({

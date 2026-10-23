@@ -50,8 +50,10 @@ export interface AppState {
   set: (partial: Partial<AppState>) => void;
 }
 
+export const APP_VERSION = "0.1.1";
+
 const defaultSignaling =
-  import.meta.env.VITE_SIGNALING_URL ?? "ws://127.0.0.1:7800/ws";
+  import.meta.env.VITE_SIGNALING_URL ?? "wss://nextdesk-4ecs.onrender.com/ws";
 
 export const useAppStore = create<AppState>((set) => ({
   onboarded: false,
