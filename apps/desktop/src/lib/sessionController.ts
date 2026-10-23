@@ -1,12 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { SignalingClient } from "./signaling";
-import { RemoteSession } from "./webrtc";
+import { RemoteSession, type IcePayload } from "./webrtc";
 import { FULL_ATTENDED, type PermissionSet, type SignalMessage } from "./protocol";
 import { APP_VERSION, useAppStore } from "./store";
 
 let signaling: SignalingClient | null = null;
 let remote: RemoteSession | null = null;
 let pendingOffer: string | null = null;
+// ICE that arrives before this side's RemoteSession exists.
+let pendingIce: IcePayload[] = [];
 
 export function getSignaling(): SignalingClient | null {
   return signaling;
@@ -146,13 +149,16 @@ function handleSignal(msg: SignalMessage): void {
     case "sdp_answer":
       void remote?.acceptAnswer(msg.sdp);
       break;
-    case "ice_candidate":
-      void remote?.addIce({
+    case "ice_candidate": {
+      const ice = {
         candidate: msg.candidate,
         sdpMid: msg.sdp_mid,
         sdpMLineIndex: msg.sdp_mline_index,
-      });
+      };
+      if (remote) void remote.addIce(ice);
+      else pendingIce.push(ice);
       break;
+    }
     case "session_end":
       void teardownSession(msg.reason);
       break;
@@ -226,12 +232,19 @@ async function beginMediaSession(
     statusMessage: role === "host" ? "Sharing your screen…" : "Connected to remote desktop",
   });
 
+  const session = remote;
+  for (const ice of pendingIce.splice(0)) void session.addIce(ice);
+
+  // Get the NexDesk window out of the way so the controller sees the desktop.
+  // The host brings it back from the taskbar to chat or disconnect.
+  if (role === "host") void getCurrentWindow().minimize().catch(() => undefined);
+
   if (role === "controller") {
-    await remote.startAsController();
+    await session.startAsController();
   } else if (pendingOffer) {
     const offer = pendingOffer;
     pendingOffer = null;
-    await remote.acceptOffer(offer);
+    await session.acceptOffer(offer);
   }
 }
 
@@ -243,7 +256,10 @@ async function handleHostControl(raw: string, granted: PermissionSet): Promise<v
     return;
   }
   if (msg.type === "input_event" && granted.control && msg.event) {
-    await invoke("inject_input", { event: msg.event });
+    // A single rejected event (e.g. an unmapped key) must not break the session.
+    await invoke("inject_input", { event: msg.event }).catch((e) =>
+      console.warn("input injection failed", e),
+    );
   }
   if (msg.type === "chat" && granted.chat && typeof msg.text === "string") {
     window.dispatchEvent(new CustomEvent("nexdesk:chat", { detail: msg.text }));
@@ -327,10 +343,18 @@ async function teardownSession(reason: string): Promise<void> {
   await remote?.close();
   remote = null;
   pendingOffer = null;
+  pendingIce = [];
   try {
     await invoke("input_reset");
   } catch {
     /* ignore */
+  }
+  if (active?.role === "host") {
+    const win = getCurrentWindow();
+    void win
+      .unminimize()
+      .then(() => win.setFocus())
+      .catch(() => undefined);
   }
   useAppStore.getState().set({
     activeSession: null,

@@ -57,21 +57,38 @@ export function SessionView() {
     };
   }, []);
 
-  function mapPointer(e: React.PointerEvent<HTMLElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
+  // Map against the rendered picture, not the letterboxed container, so a
+  // click lands on the same spot of the remote screen.
+  function mapPointer(e: { clientX: number; clientY: number }) {
+    const el = useCanvas ? canvasRef.current : videoRef.current;
+    const rect = el?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return { nx: 0, ny: 0, inside: false };
     const nx = (e.clientX - rect.left) / rect.width;
     const ny = (e.clientY - rect.top) / rect.height;
-    return { nx: clamp01(nx), ny: clamp01(ny) };
+    return { nx: clamp01(nx), ny: clamp01(ny), inside: nx >= 0 && nx <= 1 && ny >= 0 && ny <= 1 };
   }
+
+  const pendingMove = useRef<{ nx: number; ny: number } | null>(null);
 
   function onPointerMove(e: React.PointerEvent<HTMLElement>) {
     if (active.role !== "controller" || !active.granted.control) return;
-    const { nx, ny } = mapPointer(e);
-    sendInputEvent({ kind: "mouse_move", x: 0, y: 0, nx, ny });
+    const { nx, ny, inside } = mapPointer(e);
+    if (!inside) return;
+    // Coalesce to one move per animation frame.
+    const first = pendingMove.current === null;
+    pendingMove.current = { nx, ny };
+    if (first) {
+      requestAnimationFrame(() => {
+        const p = pendingMove.current;
+        pendingMove.current = null;
+        if (p) sendInputEvent({ kind: "mouse_move", x: 0, y: 0, nx: p.nx, ny: p.ny });
+      });
+    }
   }
 
   function onPointerDown(e: React.PointerEvent<HTMLElement>) {
     if (active.role !== "controller" || !active.granted.control) return;
+    e.currentTarget.focus();
     e.currentTarget.setPointerCapture(e.pointerId);
     const { nx, ny } = mapPointer(e);
     const button = e.button === 2 ? "right" : e.button === 1 ? "middle" : "left";
@@ -87,9 +104,10 @@ export function SessionView() {
 
   function onWheel(e: React.WheelEvent<HTMLElement>) {
     if (active.role !== "controller" || !active.granted.control) return;
-    e.preventDefault();
-    const { nx, ny } = mapPointer(e as unknown as React.PointerEvent<HTMLElement>);
-    sendInputEvent({ kind: "mouse_wheel", dx: e.deltaX, dy: e.deltaY, nx, ny });
+    const { nx, ny } = mapPointer(e);
+    // Normalise line/page scrolling to pixels (~100px per wheel notch).
+    const scale = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1;
+    sendInputEvent({ kind: "mouse_wheel", dx: e.deltaX * scale, dy: e.deltaY * scale, nx, ny });
   }
 
   function onKey(e: React.KeyboardEvent, pressed: boolean) {
@@ -192,7 +210,7 @@ export function SessionView() {
           />
           {active.role === "host" && (
             <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-4 py-2 text-sm text-white">
-              Waiting for controller media / streaming your display…
+              Your screen is being shared. Click Disconnect to stop.
             </div>
           )}
         </div>

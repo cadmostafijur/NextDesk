@@ -20,6 +20,13 @@ export interface RemoteSessionCallbacks {
   onError: (err: Error) => void;
 }
 
+// Native frames are JPEGs, often larger than the ~256 KB SCTP message limit, so
+// each frame is split into chunks: [u32 frameId][u16 index][u16 count][bytes].
+const FRAME_HEADER = 8;
+const FRAME_CHUNK = 16 * 1024 - FRAME_HEADER;
+// Skip capture frames while this much is still queued, so latency stays low.
+const FRAME_BACKLOG_LIMIT = 1024 * 1024;
+
 export class RemoteSession {
   readonly role: SessionRole;
   readonly sessionId: string;
@@ -32,6 +39,11 @@ export class RemoteSession {
   private captureMode: "webrtc-track" | "native-frames" | "none" = "none";
   private callbacks: RemoteSessionCallbacks;
   private closed = false;
+  private pendingIce: IcePayload[] = [];
+  private nextFrameId = 0;
+  private rxFrameId = -1;
+  private rxChunks: Uint8Array[] = [];
+  private decoding = false;
 
   constructor(
     role: SessionRole,
@@ -80,26 +92,74 @@ export class RemoteSession {
     if (dc.label === "control") this.controlDc = dc;
     if (dc.label === "frames") this.frameDc = dc;
     dc.binaryType = "arraybuffer";
-    dc.onmessage = async (ev) => {
+    dc.onmessage = (ev) => {
       if (typeof ev.data === "string") {
         this.callbacks.onDataMessage(ev.data);
         return;
       }
-      if (ev.data instanceof ArrayBuffer && this.callbacks.onFrame) {
-        try {
-          const blob = new Blob([ev.data], { type: "image/jpeg" });
-          const bmp = await createImageBitmap(blob);
-          this.callbacks.onFrame(bmp);
-        } catch (e) {
-          this.callbacks.onError(e instanceof Error ? e : new Error(String(e)));
-        }
-      }
+      if (ev.data instanceof ArrayBuffer) this.receiveFrameChunk(ev.data);
     };
+  }
+
+  private receiveFrameChunk(buf: ArrayBuffer): void {
+    if (!this.callbacks.onFrame || buf.byteLength < FRAME_HEADER) return;
+    const view = new DataView(buf);
+    const frameId = view.getUint32(0);
+    const index = view.getUint16(4);
+    const count = view.getUint16(6);
+    if (index === 0) {
+      this.rxFrameId = frameId;
+      this.rxChunks = [];
+    }
+    if (frameId !== this.rxFrameId || index !== this.rxChunks.length) return;
+    this.rxChunks.push(new Uint8Array(buf, FRAME_HEADER));
+    if (this.rxChunks.length !== count) return;
+
+    const parts = this.rxChunks;
+    this.rxChunks = [];
+    // Drop frames that arrive while the previous one is still decoding.
+    if (this.decoding) return;
+    this.decoding = true;
+    createImageBitmap(new Blob(parts as BlobPart[], { type: "image/jpeg" }))
+      .then((bmp) => this.callbacks.onFrame?.(bmp))
+      .catch(() => undefined)
+      .finally(() => {
+        this.decoding = false;
+      });
+  }
+
+  private sendFrame(jpeg: Uint8Array): void {
+    const dc = this.frameDc;
+    if (!dc || dc.readyState !== "open" || dc.bufferedAmount > FRAME_BACKLOG_LIMIT) return;
+    const frameId = this.nextFrameId++ >>> 0;
+    const count = Math.max(1, Math.ceil(jpeg.byteLength / FRAME_CHUNK));
+    try {
+      for (let i = 0; i < count; i++) {
+        const body = jpeg.subarray(i * FRAME_CHUNK, (i + 1) * FRAME_CHUNK);
+        const chunk = new Uint8Array(FRAME_HEADER + body.byteLength);
+        const view = new DataView(chunk.buffer);
+        view.setUint32(0, frameId);
+        view.setUint16(4, i);
+        view.setUint16(6, count);
+        chunk.set(body, FRAME_HEADER);
+        dc.send(chunk);
+      }
+    } catch {
+      /* channel closing */
+    }
+  }
+
+  private async flushPendingIce(): Promise<void> {
+    const queued = this.pendingIce;
+    this.pendingIce = [];
+    for (const ice of queued) await this.addIce(ice);
   }
 
   async startAsController(): Promise<void> {
     this.controlDc = this.pc.createDataChannel("control", { ordered: true });
-    this.frameDc = this.pc.createDataChannel("frames", { ordered: false, maxRetransmits: 0 });
+    // Reliable and ordered so a frame's chunks arrive complete and in sequence;
+    // the sender skips frames instead when the channel backs up.
+    this.frameDc = this.pc.createDataChannel("frames", { ordered: true });
     this.bindDataChannel(this.controlDc);
     this.bindDataChannel(this.frameDc);
     const offer = await this.pc.createOffer();
@@ -141,21 +201,19 @@ export class RemoteSession {
   }
 
   private async startNativeCapture(): Promise<void> {
-    await invoke("capture_start", { monitorIndex: 0, maxFps: 20, quality: 55 });
-    this.unlistenCapture = await listen<number[]>("capture://frame", (event) => {
-      if (!this.frameDc || this.frameDc.readyState !== "open") return;
-      const bytes = Uint8Array.from(event.payload);
-      try {
-        this.frameDc.send(bytes);
-      } catch {
-        /* channel congested */
-      }
+    this.unlistenCapture = await listen<string>("capture://frame", (event) => {
+      const bin = atob(event.payload);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      this.sendFrame(bytes);
     });
+    await invoke("capture_start", { monitorIndex: 0, maxFps: 20, quality: 60 });
     this.captureMode = "native-frames";
   }
 
   async acceptOffer(sdp: string): Promise<void> {
     await this.pc.setRemoteDescription({ type: "offer", sdp });
+    await this.flushPendingIce();
     if (this.role === "host") {
       await this.startAsHost();
     }
@@ -166,9 +224,15 @@ export class RemoteSession {
 
   async acceptAnswer(sdp: string): Promise<void> {
     await this.pc.setRemoteDescription({ type: "answer", sdp });
+    await this.flushPendingIce();
   }
 
   async addIce(ice: IcePayload): Promise<void> {
+    // Candidates can arrive before the description they belong to is applied.
+    if (!this.pc.remoteDescription) {
+      this.pendingIce.push(ice);
+      return;
+    }
     try {
       await this.pc.addIceCandidate({
         candidate: ice.candidate,
@@ -176,7 +240,8 @@ export class RemoteSession {
         sdpMLineIndex: ice.sdpMLineIndex ?? undefined,
       });
     } catch (e) {
-      this.callbacks.onError(e instanceof Error ? e : new Error(String(e)));
+      // One unusable candidate is normal; others usually still connect.
+      console.warn("ICE candidate rejected", e);
     }
   }
 

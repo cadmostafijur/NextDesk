@@ -56,9 +56,13 @@ impl InputInjector {
             InputEvent::MouseWheel { dx, dy, nx, ny } => {
                 let (x, y) = self.norm_to_abs(*nx, *ny);
                 eng.move_mouse(x, y, Coordinate::Abs)?;
-                // enigo scroll units are coarse; scale deltas
-                let sy = (*dy / 40.0).round() as i32;
-                let sx = (*dx / 40.0).round() as i32;
+                // One enigo unit is one wheel notch (~100px of browser delta)
+                let notches = |d: f64| {
+                    let n = (d / 100.0).round() as i32;
+                    if n == 0 && d != 0.0 { d.signum() as i32 } else { n }
+                };
+                let sy = notches(*dy);
+                let sx = notches(*dx);
                 if sy != 0 {
                     eng.scroll(sy, enigo::Axis::Vertical)?;
                 }
@@ -100,11 +104,27 @@ impl InputInjector {
     }
 
     fn norm_to_abs(&self, nx: f64, ny: f64) -> (i32, i32) {
-        let w = *self.screen_w.lock() as f64;
-        let h = *self.screen_h.lock() as f64;
+        let (w, h) = self.injection_space();
+        let (w, h) = (w as f64, h as f64);
         let nx = nx.clamp(0.0, 1.0);
         let ny = ny.clamp(0.0, 1.0);
         ((nx * (w - 1.0)).round() as i32, (ny * (h - 1.0)).round() as i32)
+    }
+
+    /// The coordinate space enigo's absolute moves are normalised against.
+    /// On Windows that is the primary screen as `GetSystemMetrics` reports it,
+    /// which tracks the process DPI mode, so mapping into it lands on the same
+    /// pixel the controller pointed at regardless of display scaling.
+    fn injection_space(&self) -> (u32, u32) {
+        #[cfg(windows)]
+        {
+            use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSCREEN, SM_CYSCREEN};
+            let (w, h) = unsafe { (GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)) };
+            if w > 0 && h > 0 {
+                return (w as u32, h as u32);
+            }
+        }
+        (*self.screen_w.lock(), *self.screen_h.lock())
     }
 }
 
@@ -147,6 +167,30 @@ fn map_key(key: &str, code: &str) -> Option<Key> {
         "ShiftLeft" | "ShiftRight" => Some(Key::Shift),
         "AltLeft" | "AltRight" => Some(Key::Alt),
         "MetaLeft" | "MetaRight" => Some(Key::Meta),
+        "NumpadEnter" => Some(Key::Return),
+        "CapsLock" => Some(Key::CapsLock),
+        "F1" => Some(Key::F1),
+        "F2" => Some(Key::F2),
+        "F3" => Some(Key::F3),
+        "F4" => Some(Key::F4),
+        "F5" => Some(Key::F5),
+        "F6" => Some(Key::F6),
+        "F7" => Some(Key::F7),
+        "F8" => Some(Key::F8),
+        "F9" => Some(Key::F9),
+        "F10" => Some(Key::F10),
+        "F11" => Some(Key::F11),
+        "F12" => Some(Key::F12),
+        #[cfg(windows)]
+        "Insert" => Some(Key::Insert),
+        #[cfg(windows)]
+        "PrintScreen" => Some(Key::PrintScr),
+        #[cfg(windows)]
+        "Pause" => Some(Key::Pause),
+        #[cfg(windows)]
+        "NumLock" => Some(Key::Numlock),
+        #[cfg(windows)]
+        "ContextMenu" => Some(Key::Apps),
         c if c.starts_with("Key") && c.len() == 4 => {
             let ch = c.chars().nth(3)?;
             Some(Key::Unicode(ch.to_ascii_lowercase()))

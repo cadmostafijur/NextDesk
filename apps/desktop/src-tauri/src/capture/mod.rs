@@ -3,6 +3,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{anyhow, Result};
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::Engine;
 use image::codecs::jpeg::JpegEncoder;
 use image::{ColorType, ImageEncoder};
 use parking_lot::Mutex;
@@ -63,6 +65,18 @@ impl CaptureState {
     }
 }
 
+/// Frames wider than this are downscaled before encoding to keep each JPEG small
+/// enough to stream at interactive frame rates.
+const MAX_FRAME_WIDTH: u32 = 1920;
+
+/// Monitors with the primary display first, so index 0 is always the screen
+/// that absolute mouse injection targets.
+fn ordered_monitors() -> Result<Vec<Monitor>> {
+    let mut monitors = Monitor::all().map_err(|e| anyhow!("monitor enum failed: {e}"))?;
+    monitors.sort_by_key(|m| !m.is_primary());
+    Ok(monitors)
+}
+
 fn capture_loop(
     state: &CaptureState,
     app: AppHandle,
@@ -70,8 +84,7 @@ fn capture_loop(
     max_fps: u32,
     quality: u8,
 ) -> Result<()> {
-    let monitors = Monitor::all().map_err(|e| anyhow!("monitor enum failed: {e}"))?;
-    let monitor = monitors
+    let monitor = ordered_monitors()?
         .into_iter()
         .nth(monitor_index)
         .ok_or_else(|| anyhow!("monitor {monitor_index} not found"))?;
@@ -84,7 +97,16 @@ fn capture_loop(
         let started = std::time::Instant::now();
         match monitor.capture_image() {
             Ok(img) => {
-                let rgb = image::DynamicImage::ImageRgba8(img).into_rgb8();
+                let mut rgb = image::DynamicImage::ImageRgba8(img).into_rgb8();
+                if rgb.width() > MAX_FRAME_WIDTH {
+                    let h = rgb.height() * MAX_FRAME_WIDTH / rgb.width();
+                    rgb = image::imageops::resize(
+                        &rgb,
+                        MAX_FRAME_WIDTH,
+                        h,
+                        image::imageops::FilterType::Triangle,
+                    );
+                }
                 let (w, h) = rgb.dimensions();
                 let mut jpeg = Vec::with_capacity((w * h / 4) as usize);
                 {
@@ -93,8 +115,8 @@ fn capture_loop(
                         .write_image(rgb.as_raw(), w, h, ColorType::Rgb8.into())
                         .is_ok()
                     {
-                        // Emit as Vec<u8> for the frontend data channel bridge
-                        let _ = app.emit("capture://frame", jpeg);
+                        // Base64 is ~4x smaller over the IPC bridge than a JSON number array
+                        let _ = app.emit("capture://frame", BASE64.encode(&jpeg));
                     }
                 }
             }
@@ -112,7 +134,7 @@ fn capture_loop(
 }
 
 pub fn list_monitors() -> Result<Vec<MonitorInfo>> {
-    let monitors = Monitor::all().map_err(|e| anyhow!("{e}"))?;
+    let monitors = ordered_monitors()?;
     Ok(monitors
         .into_iter()
         .enumerate()
