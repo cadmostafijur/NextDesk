@@ -17,7 +17,7 @@ use crate::auth::authenticate_device_hello;
 use crate::rate_limit::allow_connect;
 use crate::session::PendingConnect;
 use crate::state::{AppState, ConnectedDevice};
-use crate::turn::mint_turn_credentials;
+use crate::turn::turn_credentials_for;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -39,6 +39,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     });
 
     let mut device_id: Option<String> = None;
+    let conn_id = Uuid::new_v4();
 
     while let Some(Ok(msg)) = stream.next().await {
         let text = match msg {
@@ -98,6 +99,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                         state.online.insert(
                             did.0.clone(),
                             ConnectedDevice {
+                                conn_id,
                                 device_id: did.clone(),
                                 device_name: device_name.clone(),
                                 presence: DevicePresence::Online,
@@ -110,12 +112,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                         device_id = Some(did.0.clone());
                         state.audit("ws_hello", did.as_str(), &client_version);
 
-                        let turn = mint_turn_credentials(
-                            &state.cfg.turn_shared_secret,
-                            did.as_str(),
-                            state.cfg.turn_ttl_seconds,
-                            &state.cfg.turn_urls,
-                        );
+                        let turn = turn_credentials_for(&state.cfg, did.as_str());
                         let ack = Envelope::new(SignalMessage::HelloAck {
                             device_id: did,
                             server_time: Utc::now(),
@@ -153,8 +150,8 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     }
 
     if let Some(did) = device_id {
-        state.disconnect_device(&did, "socket_closed");
-        info!(device = %did, "device offline");
+        state.disconnect_connection(&did, conn_id, "socket_closed");
+        info!(device = %did, "socket closed");
     }
     writer.abort();
 }

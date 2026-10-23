@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 
 use crate::auth::verify_token;
+use crate::config::Config;
 use crate::state::AppState;
 
 type HmacSha1 = Hmac<Sha1>;
@@ -48,18 +49,32 @@ pub fn mint_turn_credentials(
     }
 }
 
+/// Credentials handed to a client: a hosted relay's static login when one is
+/// configured (e.g. ExpressTURN, Metered), otherwise short-lived coturn REST
+/// credentials signed with the shared secret.
+pub fn turn_credentials_for(cfg: &Config, user_id: &str) -> TurnCredentials {
+    match (&cfg.turn_username, &cfg.turn_credential) {
+        (Some(username), Some(credential)) => TurnCredentials {
+            urls: cfg.turn_urls.clone(),
+            username: username.clone(),
+            credential: credential.clone(),
+            ttl_seconds: cfg.turn_ttl_seconds,
+        },
+        _ => mint_turn_credentials(
+            &cfg.turn_shared_secret,
+            user_id,
+            cfg.turn_ttl_seconds,
+            &cfg.turn_urls,
+        ),
+    }
+}
+
 pub async fn issue_credentials(
     State(state): State<Arc<AppState>>,
     Query(q): Query<TurnQuery>,
 ) -> Result<Json<TurnCredentials>, StatusCode> {
     let claims = verify_token(&state, &q.access_token)?;
-    let creds = mint_turn_credentials(
-        &state.cfg.turn_shared_secret,
-        &claims.sub,
-        state.cfg.turn_ttl_seconds,
-        &state.cfg.turn_urls,
-    );
-    Ok(Json(creds))
+    Ok(Json(turn_credentials_for(&state.cfg, &claims.sub)))
 }
 
 #[cfg(test)]

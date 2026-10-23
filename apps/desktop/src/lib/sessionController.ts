@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, UserAttentionType } from "@tauri-apps/api/window";
 import { SignalingClient } from "./signaling";
 import { RemoteSession, type IcePayload } from "./webrtc";
 import { FULL_ATTENDED, type PermissionSet, type SignalMessage } from "./protocol";
@@ -121,10 +121,14 @@ function handleSignal(msg: SignalMessage): void {
           message: msg.message,
         },
       });
+      void bringToFront();
       break;
     case "connect_reject":
       store.set({
-        error: `Connection rejected: ${msg.reason}`,
+        error:
+          msg.reason === "Rejected by user"
+            ? "They declined the connection."
+            : `Connection declined: ${msg.reason}`,
         statusMessage: null,
       });
       break;
@@ -162,11 +166,72 @@ function handleSignal(msg: SignalMessage): void {
       void teardownSession(msg.reason);
       break;
     case "error":
-      store.set({ error: `${msg.code}: ${msg.message}` });
+      store.set({ error: friendlyError(msg.code, msg.message), statusMessage: null });
+      if (msg.code === "session_expired" && store.incoming?.sessionId === msg.related_id) {
+        store.set({ incoming: null });
+      }
       break;
     default:
       break;
   }
+}
+
+function friendlyError(code: string, message: string): string {
+  switch (code) {
+    case "session_expired":
+      return "No answer: the other PC didn't accept within 2 minutes. Make sure NexDesk is open there, then try again.";
+    case "offline":
+      return message.includes("peer")
+        ? "The other PC went offline during the connection."
+        : "That PC is offline. Ask them to open NexDesk and check its ID.";
+    case "conflict":
+      return message.includes("busy")
+        ? "That PC is already in a session."
+        : "This NexDesk ID was opened in another window, so this one was signed out.";
+    case "rate_limited":
+      return "Too many connection attempts. Wait a minute and try again.";
+    case "invalid_message":
+      return message === "cannot connect to self"
+        ? "That's this PC's own ID. Enter the other PC's ID."
+        : `Something went wrong: ${message}`;
+    default:
+      return `Something went wrong: ${message}`;
+  }
+}
+
+/** Surface an incoming request even when NexDesk is minimized or behind other windows. */
+async function bringToFront(): Promise<void> {
+  try {
+    const win = getCurrentWindow();
+    await win.unminimize();
+    await win.show();
+    await win.setFocus();
+    await win.requestUserAttention(UserAttentionType.Critical);
+  } catch {
+    /* best effort */
+  }
+}
+
+// If the peer-to-peer link isn't up by then, the networks are blocking it.
+const CONNECT_TIMEOUT_MS = 25_000;
+let connectWatchdog: number | null = null;
+
+function clearConnectWatchdog(): void {
+  if (connectWatchdog !== null) {
+    window.clearTimeout(connectWatchdog);
+    connectWatchdog = null;
+  }
+}
+
+function failConnection(): void {
+  clearConnectWatchdog();
+  const relay = Boolean(getSignaling()?.turn?.urls?.some((u) => u.startsWith("turn")));
+  useAppStore.getState().set({
+    error: relay
+      ? "Couldn't connect to the other PC, even through the relay. Check both internet connections and try again."
+      : "Couldn't connect to the other PC. One of the networks (often mobile data or office Wi-Fi) blocks direct connections, and no relay server is set up yet. Try both PCs on normal home Wi-Fi.",
+  });
+  void endSession("Connection failed");
 }
 
 async function beginMediaSession(
@@ -206,6 +271,11 @@ async function beginMediaSession(
       void handleHostControl(data, granted);
     },
     onConnectionState: (state) => {
+      if (state === "connected") clearConnectWatchdog();
+      if (state === "failed") {
+        failConnection();
+        return;
+      }
       const cur = useAppStore.getState().activeSession;
       if (cur) {
         useAppStore.getState().set({
@@ -233,6 +303,13 @@ async function beginMediaSession(
 
   const session = remote;
   for (const ice of pendingIce.splice(0)) void session.addIce(ice);
+
+  clearConnectWatchdog();
+  connectWatchdog = window.setTimeout(() => {
+    if (remote === session && useAppStore.getState().activeSession?.connectionState !== "connected") {
+      failConnection();
+    }
+  }, CONNECT_TIMEOUT_MS);
 
   // Get the NexDesk window out of the way so the controller sees the desktop.
   // The host brings it back from the taskbar to chat or disconnect.
@@ -339,6 +416,7 @@ async function teardownSession(reason: string): Promise<void> {
       reason,
     }).catch(() => undefined);
   }
+  clearConnectWatchdog();
   await remote?.close();
   remote = null;
   pendingOffer = null;

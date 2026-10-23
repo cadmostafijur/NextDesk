@@ -8,6 +8,10 @@ pub struct Config {
     pub redis_url: Option<String>,
     pub turn_shared_secret: String,
     pub turn_urls: Vec<String>,
+    /// Static login for a hosted TURN relay; when both are set they are sent
+    /// as-is instead of minting coturn REST credentials.
+    pub turn_username: Option<String>,
+    pub turn_credential: Option<String>,
     pub turn_ttl_seconds: u64,
     pub heartbeat_timeout_secs: u64,
     pub session_timeout_secs: u64,
@@ -40,6 +44,8 @@ impl Config {
             turn_shared_secret: std::env::var("NEXDESK_TURN_SECRET")
                 .unwrap_or_else(|_| random_secret()),
             turn_urls,
+            turn_username: std::env::var("NEXDESK_TURN_USERNAME").ok().filter(|s| !s.is_empty()),
+            turn_credential: std::env::var("NEXDESK_TURN_CREDENTIAL").ok().filter(|s| !s.is_empty()),
             turn_ttl_seconds: std::env::var("NEXDESK_TURN_TTL")
                 .ok()
                 .and_then(|v| v.parse().ok())

@@ -17,6 +17,9 @@ pub type WsSender = mpsc::UnboundedSender<String>;
 
 #[derive(Debug, Clone)]
 pub struct ConnectedDevice {
+    /// Identifies the WebSocket this entry belongs to, so a stale socket that
+    /// closes after the device reconnected does not evict the newer one.
+    pub conn_id: Uuid,
     pub device_id: DeviceId,
     pub device_name: String,
     pub presence: DevicePresence,
@@ -178,6 +181,14 @@ impl AppState {
             for sid in end_sessions {
                 self.sessions.remove(&sid);
             }
+        }
+    }
+
+    /// Disconnect only if `device_id` is still served by socket `conn_id`.
+    pub fn disconnect_connection(&self, device_id: &str, conn_id: Uuid, reason: &str) {
+        let current = self.online.get(device_id).map(|d| d.conn_id);
+        if current == Some(conn_id) {
+            self.disconnect_device(device_id, reason);
         }
     }
 

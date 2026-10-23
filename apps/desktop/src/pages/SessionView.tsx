@@ -12,6 +12,7 @@ export function SessionView() {
   const [messages, setMessages] = useState<string[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [useCanvas, setUseCanvas] = useState(false);
+  const [gotStream, setGotStream] = useState(false);
 
   useEffect(() => {
     const t = window.setInterval(() => {
@@ -27,6 +28,7 @@ export function SessionView() {
         videoRef.current.srcObject = stream;
         void videoRef.current.play().catch(() => undefined);
         setUseCanvas(false);
+        setGotStream(true);
       }
     };
     const onFrame = (ev: Event) => {
@@ -151,8 +153,7 @@ export function SessionView() {
         <div className="flex items-center gap-3 text-xs text-ink-muted">
           <span className="inline-flex items-center gap-1">
             <Gauge size={14} />
-            {active.connectionState}
-            {active.captureMode ? ` · ${active.captureMode}` : ""}
+            {connectionLabel(active.connectionState)}
           </span>
           <span className="font-mono">{mm}:{ss}</span>
           {active.granted.control && active.role === "controller" && (
@@ -208,6 +209,14 @@ export function SessionView() {
             ref={canvasRef}
             className={useCanvas ? "max-h-full max-w-full object-contain" : "hidden"}
           />
+          {active.role === "controller" && !useCanvas && !gotStream && (
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm text-white/80">
+              <span className="h-6 w-6 animate-spin rounded-full border-2 border-white/25 border-t-white" />
+              {active.connectionState === "connected"
+                ? "Connected. Waiting for their screen…"
+                : `Connecting to ${active.peer}…`}
+            </div>
+          )}
           {active.role === "host" && (
             <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-4 py-2 text-sm text-white">
               Your screen is being shared. Click Disconnect to stop.
@@ -242,6 +251,19 @@ export function SessionView() {
       </div>
     </div>
   );
+}
+
+function connectionLabel(state: string): string {
+  switch (state) {
+    case "connected":
+      return "Connected";
+    case "disconnected":
+      return "Reconnecting…";
+    case "failed":
+      return "Connection failed";
+    default:
+      return "Connecting…";
+  }
 }
 
 function clamp01(n: number) {

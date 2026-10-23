@@ -50,7 +50,7 @@ export interface AppState {
   set: (partial: Partial<AppState>) => void;
 }
 
-export const APP_VERSION = "0.1.2";
+export const APP_VERSION = "0.1.3";
 
 const defaultSignaling =
   import.meta.env.VITE_SIGNALING_URL ?? "wss://nextdesk-4ecs.onrender.com/ws";

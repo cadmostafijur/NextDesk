@@ -11,6 +11,8 @@
     "core:window:allow-unminimize",
     "core:window:allow-set-focus",
     "core:window:allow-set-theme",
+    "core:window:allow-show",
+    "core:window:allow-request-user-attention",
     "shell:allow-open",
     "dialog:default",
     "fs:default",
